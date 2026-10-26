@@ -1,0 +1,14 @@
+# Store text files with LF line endings in git, whatever OS edits them.
+# Windows tools write CRLF; Linux containers (Docker, Azure) expect LF.
+# Without this, shell scripts break inside containers and diffs show
+# every line as "changed".
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF.
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+
+# Binary files: never touch line endings.
+*.png binary
+*.jpg binary
+*.dcm binary

@@ -1,0 +1,50 @@
+# pyproject.toml is the single config file for a modern Python project:
+# what it depends on, plus settings for the tools (pytest, ruff, mypy).
+
+[project]
+name = "dicom-compare-backend"
+version = "0.1.0"
+description = "FastAPI backend for comparing two DICOM scans"
+requires-python = ">=3.12"
+
+# Runtime dependencies: what the app needs to run.
+# We add libraries only when a step actually uses them.
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",     # the ASGI server that runs FastAPI
+    "pydantic-settings>=2.4",      # typed settings read from env / .env
+    "sqlalchemy>=2.0",             # ORM: Python classes <-> SQL tables
+    "psycopg[binary]>=3.2",        # Postgres driver used by SQLAlchemy
+]
+
+# Dev-only dependencies: install with  pip install -e ".[dev]"
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "httpx>=0.27",                 # FastAPI's TestClient needs it
+    "ruff>=0.6",                   # linter + formatter
+    "mypy>=1.11",                  # static type checker
+]
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+# E/F = errors, I = import sorting, B = likely bugs, UP = modern syntax
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+plugins = ["pydantic.mypy"]

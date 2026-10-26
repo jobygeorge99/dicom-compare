@@ -147,3 +147,30 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# ---------------------------------------------------------------
+# Python (added for the FastAPI backend)
+# ---------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Editors / OS
+.idea/
+.DS_Store
+Thumbs.db
+
+# ---------------------------------------------------------------
+# Medical images: NEVER commit scans, even "test" ones.
+# Sample files are downloaded by a script, not stored in git.
+# ---------------------------------------------------------------
+*.dcm
+*.dicom
+/data/
