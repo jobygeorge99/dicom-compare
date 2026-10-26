@@ -1,0 +1,26 @@
+# Local infrastructure. Run with:  docker compose up -d
+#
+# For now this only runs Postgres. The backend runs on your machine with
+# uvicorn so you get fast reloads and easy debugging in VS Code.
+# Later we'll add the backend and frontend here as containers too.
+
+services:
+  db:
+    image: postgres:16            # pin a major version; same as Azure later
+    container_name: dicom-db
+    environment:                  # values come from the .env file next to this one
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"   # host:container
+    volumes:
+      - pgdata:/var/lib/postgresql/data # data survives container restarts
+    healthcheck:                  # lets Docker report when Postgres is ready
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
