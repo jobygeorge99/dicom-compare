@@ -16,6 +16,8 @@ dependencies = [
     "sqlalchemy>=2.0",             # ORM: Python classes <-> SQL tables
     "psycopg[binary]>=3.2",        # Postgres driver used by SQLAlchemy
     "alembic>=1.13",               # database migrations ("git for the schema")
+    "argon2-cffi>=23.1",           # password hashing (Argon2id)
+    "pyjwt>=2.9",                  # create and verify JWT access tokens
 ]
 
 # Dev-only dependencies: install with  pip install -e ".[dev]"
