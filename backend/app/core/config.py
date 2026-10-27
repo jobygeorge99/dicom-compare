@@ -9,11 +9,16 @@ Why a Settings class instead of os.getenv() everywhere?
 
 from functools import lru_cache
 from pathlib import Path
+from typing import Self
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # backend/app/core/config.py -> parents[3] is the repo root, where .env lives.
 REPO_ROOT = Path(__file__).resolve().parents[3]
+
+# Only acceptable on a developer laptop. Production refuses to start with it.
+DEV_JWT_SECRET = "dev-only-insecure-jwt-secret-change-me-0123456789"
 
 
 class Settings(BaseSettings):
@@ -25,6 +30,20 @@ class Settings(BaseSettings):
     app_name: str = "DICOM Compare API"
     app_env: str = "local"  # local | staging | production
     database_url: str = "postgresql+psycopg://dicom:change-me-locally@localhost:5432/dicom_compare"
+
+    # --- Auth ---
+    jwt_secret_key: str = DEV_JWT_SECRET
+    jwt_algorithm: str = "HS256"
+    access_token_expire_minutes: int = 30
+
+    @model_validator(mode="after")
+    def refuse_weak_secret_outside_local(self) -> Self:
+        # "Fail fast": better to crash at startup than run production with a
+        # secret that is published in our own source code.
+        weak = self.jwt_secret_key == DEV_JWT_SECRET or len(self.jwt_secret_key) < 32
+        if self.app_env != "local" and weak:
+            raise ValueError("JWT_SECRET_KEY must be a strong secret outside local dev")
+        return self
 
 
 @lru_cache  # build Settings once, then reuse the same object everywhere
