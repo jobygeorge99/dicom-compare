@@ -20,7 +20,7 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.security import hash_password
+from app.core.security import create_access_token, hash_password
 from app.db.base import Base
 from app.db.models import Role, User
 from app.db.session import get_db
@@ -98,3 +98,22 @@ def make_user(db_session: Session) -> Callable[..., User]:
         return user
 
     return _make_user
+
+
+LoginAs = Callable[[Role], tuple[User, dict[str, str]]]
+
+
+@pytest.fixture
+def login_as(make_user: Callable[..., User]) -> LoginAs:
+    """login_as(Role.ADMIN) -> (the user, headers carrying their token).
+
+    Makes the token directly instead of calling the login endpoint:
+    faster, and these tests are about permissions, not about login.
+    """
+
+    def _login_as(role: Role) -> tuple[User, dict[str, str]]:
+        user = make_user(email=f"{role.value}@example.com", role=role)
+        token = create_access_token(subject=str(user.id), role=role.value)
+        return user, {"Authorization": f"Bearer {token}"}
+
+    return _login_as

@@ -5,6 +5,7 @@ user) and FastAPI builds it. Auth rules live here once, not copied into
 every route.
 """
 
+from collections.abc import Callable
 from typing import Annotated
 
 import jwt
@@ -12,6 +13,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 
+from app.core.permissions import Permission, has_permission
 from app.core.security import decode_access_token
 from app.db.models import User
 from app.db.session import get_db
@@ -49,3 +51,25 @@ def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def require_permission(permission: Permission) -> Callable[[User], User]:
+    """Build a dependency that lets the request through only with `permission`.
+
+    Usage in a route:
+        admin: Annotated[User, Depends(require_permission(Permission.USERS_CREATE))]
+
+    It is a "factory": a function that returns a function. Each route passes
+    the permission it needs and gets its own checker back.
+    """
+
+    def checker(current_user: CurrentUser) -> User:
+        # Logged in (else get_current_user already raised 401), but allowed?
+        if not has_permission(current_user.role, permission):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="You do not have permission to do this",
+            )
+        return current_user
+
+    return checker
