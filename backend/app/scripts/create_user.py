@@ -2,20 +2,18 @@
 
     python -m app.scripts.create_user --email admin@example.com --role admin
 
-Why a script? The API's "create user" endpoint will be admin-only, so the
+Why a script? The API's "create user" endpoint is admin-only, so the
 first admin has to come from somewhere else: this is the "bootstrap" problem.
+It calls the same service as the API, so the same rules apply.
 """
 
 import argparse
 import getpass
 import sys
 
-from app.core.security import hash_password
-from app.db.models import Role, User
+from app.db.models import Role
 from app.db.session import SessionLocal
-from app.services.auth import get_user_by_email, normalize_email
-
-MIN_PASSWORD_LENGTH = 12
+from app.services.users import MIN_PASSWORD_LENGTH, EmailAlreadyRegisteredError, create_user
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -39,17 +37,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     with SessionLocal() as db:
-        if get_user_by_email(db, args.email) is not None:
+        try:
+            user = create_user(db, email=args.email, password=password, role=Role(args.role))
+        except EmailAlreadyRegisteredError:
             print(f"A user with email {args.email} already exists.", file=sys.stderr)
             return 1
-
-        user = User(
-            email=normalize_email(args.email),
-            password_hash=hash_password(password),
-            role=Role(args.role),
-        )
-        db.add(user)
-        db.commit()
         print(f"Created {user.role.value} user {user.email} (id {user.id}).")
 
     return 0

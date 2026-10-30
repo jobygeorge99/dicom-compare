@@ -7,8 +7,10 @@ check that every piece fits together. Needs Postgres running (docker compose up 
 from collections.abc import Callable
 
 from fastapi.testclient import TestClient
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
-from app.db.models import Role, User
+from app.db.models import AuditAction, AuditLog, Role, User
 from tests.conftest import TEST_PASSWORD
 
 LOGIN_URL = "/api/v1/auth/login"
@@ -92,3 +94,17 @@ def test_deactivated_user_loses_access_with_a_valid_token(
 
     response = client.get(ME_URL, headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 401
+
+
+def test_logins_are_audited(
+    client: TestClient, make_user: Callable[..., User], db_session: Session
+) -> None:
+    user = make_user(email="ana@example.com")
+
+    login(client, "ana@example.com")
+    client.post(LOGIN_URL, data={"username": "ana@example.com", "password": "wrong-password!"})
+
+    entries = db_session.scalars(select(AuditLog).order_by(AuditLog.id)).all()
+    assert [e.action for e in entries] == [AuditAction.LOGIN_SUCCEEDED, AuditAction.LOGIN_FAILED]
+    assert entries[0].actor_id == user.id
+    assert entries[1].target == "ana@example.com"  # the attempted email, never the password
