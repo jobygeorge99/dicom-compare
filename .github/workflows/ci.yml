@@ -1,0 +1,85 @@
+# Continuous Integration: GitHub runs this on every push to main and every PR.
+# A red cross here means "do not merge". Docs: https://docs.github.com/actions
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# If you push again while a run is still going, cancel the old run.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least privilege for the workflow itself: it only needs to read the code.
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend (lint, types, migrations, tests)
+    runs-on: ubuntu-latest # a fresh Linux virtual machine for every run
+    timeout-minutes: 15
+
+    defaults:
+      run:
+        working-directory: backend # every `run:` step starts in backend/
+
+    # A real Postgres, started next to the job, same version as docker-compose.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: dicom
+          POSTGRES_PASSWORD: ci-only-password
+          POSTGRES_DB: dicom_compare
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U dicom -d dicom_compare"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    # Settings for our app. There is no .env file here, so pydantic-settings
+    # reads these environment variables instead: 12-factor config at work.
+    env:
+      APP_ENV: ci
+      DATABASE_URL: postgresql+psycopg://dicom:ci-only-password@localhost:5432/dicom_compare
+      # Not a real secret: it only signs throwaway test tokens on a throwaway
+      # machine. APP_ENV is not "local", so our config REQUIRES a strong one.
+      JWT_SECRET_KEY: ci-only-signing-key-not-a-real-secret-0123456789
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip # reuse downloaded packages between runs: much faster
+          cache-dependency-path: backend/pyproject.toml
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Lint and formatting (ruff)
+        run: |
+          ruff check .
+          ruff format --check .
+
+      - name: Type check (mypy)
+        run: mypy app tests
+
+      - name: Migrations apply to an empty database
+        run: alembic upgrade head
+
+      - name: Models and migrations are in sync
+        # Fails if someone changed a model but forgot to generate a migration.
+        run: alembic check
+
+      - name: Tests (pytest)
+        run: pytest -v
