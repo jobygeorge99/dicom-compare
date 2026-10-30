@@ -18,6 +18,7 @@ dependencies = [
     "alembic>=1.13",               # database migrations ("git for the schema")
     "argon2-cffi>=23.1",           # password hashing (Argon2id)
     "pyjwt>=2.9",                  # create and verify JWT access tokens
+    "python-multipart>=0.0.9",     # lets FastAPI read form data (the login form)
 ]
 
 # Dev-only dependencies: install with  pip install -e ".[dev]"
