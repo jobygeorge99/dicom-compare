@@ -1,0 +1,23 @@
+{
+  // TypeScript settings. "strict" is the frontend twin of mypy --strict.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler", // let Vite, not tsc, resolve imports
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+
+    "strict": true,
+    "noUncheckedIndexedAccess": true, // list[0] might be undefined: make us check
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true, // type-only imports must say `import type`
+    "skipLibCheck": true,
+    "noEmit": true // tsc only CHECKS; Vite does the actual building
+  },
+  "include": ["src", "vite.config.ts"]
+}
